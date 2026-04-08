@@ -1,5 +1,6 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import logging
 import httpx
 import re
@@ -253,7 +254,7 @@ async def run_sequential_pipeline(initial_messages: List[Dict], agents_filter: O
     from tools import TOOLS_SCHEMAS
     from tool_executor import execute_tool_call
     import json
-    from router import route_request
+    from app.router import route_request
     from utils import extract_text_from_content
     
     memory_bank = get_memory_bank()

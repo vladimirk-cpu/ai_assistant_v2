@@ -8,18 +8,34 @@ import tools
 
 logger = logging.getLogger(__name__)
 
+def safe_parse_arguments(arguments: Any) -> Dict[str, Any]:
+    """Безопасно парсит аргументы, даже если они приходят в виде строки или с ошибками."""
+    if not arguments:
+        return {}
+        
+    if isinstance(arguments, dict):
+        return arguments
+        
+    if isinstance(arguments, str):
+        try:
+            # Модели иногда могут возвращать JSON с лишними пробелами или переносами
+            return json.loads(arguments.strip())
+        except Exception as e:
+            logger.error(f"Failed to parse arguments: {e}")
+            return {"error": f"Failed to parse arguments: {e}"}
+            
+    return {"error": f"Invalid arguments type: {type(arguments)}"}
+
 async def execute_tool_call(tool_call: Dict[str, Any]) -> Dict[str, Any]:
     """Выполняет один tool_call и возвращает результат."""
     tool_name = tool_call.get("function", {}).get("name")
-    arguments = tool_call.get("function", {}).get("arguments", {})
+    raw_arguments = tool_call.get("function", {}).get("arguments", {})
     
-    # arguments приходят как JSON-строка, нужно распарсить
-    if isinstance(arguments, str):
-        try:
-            arguments = json.loads(arguments)
-        except Exception as e:
-            logger.error(f"Failed to parse arguments: {e}")
-            arguments = {}
+    # Используем безопасный парсинг
+    arguments = safe_parse_arguments(raw_arguments)
+    
+    if "error" in arguments:
+        return arguments
             
     # Сопоставление имени функции с реализацией
     if tool_name == "write_file":

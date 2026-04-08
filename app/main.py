@@ -8,10 +8,20 @@ from pydantic import BaseModel
 import httpx
 import os
 import sys
+import io
 import time
+
+# Обеспечиваем работу с UTF-8 в консоли Windows
+if sys.platform == "win32":
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    except Exception:
+        pass
 
 # Добавим путь к папке app для корректных импортов
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Абсолютные импорты (без точек)
 from settings import API_BASE_URL, API_KEY, MODEL_NAME, LOGS_PATH

@@ -1,59 +1,58 @@
 import json
 import logging
-import asyncio
-from typing import Dict, Any, List
-from settings import API_BASE_URL, API_KEY, ARCHITECT_MODEL_REGULAR
-from utils import call_model
+import httpx
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
-ROUTER_PROMPT = """Ты — интеллектуальный маршрутизатор запросов для мультиагентной системы. Проанализируй сообщение пользователя и определи:
-
-1. Тип задачи (один из: architecture, code, debug, review, mixed).
-2. Сложность (simple или complex). Simple — если задача не требует глубокого рассуждения, complex — если нужен сложный анализ, планирование, архитектура.
-3. Какие агенты должны быть вызваны (список из: Architect, Code, Debug, Review). Порядок должен быть логичным (Architect перед Code, Debug и Review после).
-
-Ответь ТОЛЬКО в формате JSON, без пояснений:
-{
-    "task_type": "code",
-    "complexity": "simple",
-    "agents": ["Code"],
-    "reason": "Краткое пояснение решения"
+DEFAULT_ROUTING = {
+    "task_type": "general",
+    "complexity": "regular",
+    "agents": ["Architect", "Code"],
+    "reason": "fallback"
 }
-"""
 
 async def route_request(user_message: str) -> Dict[str, Any]:
-    """
-    Отправляет запрос на модель и возвращает решение о маршрутизации.
-    В случае ошибки возвращает fallback.
-    """
+    if not user_message or len(user_message.strip()) < 3:
+        logger.info("Router: пустой запрос, возвращаю fallback")
+        return DEFAULT_ROUTING
+
+    prompt = f"""Ты — интеллектуальный роутер. Проанализируй запрос пользователя и верни ТОЛЬКО JSON (без пояснений) в формате:
+{{
+"task_type": "coding|debugging|review|research|general",
+"complexity": "simple|regular|complex",
+"agents": ["Architect", "Code", "Debug", "Review"],
+"reason": "краткое объяснение"
+}}
+
+Запрос: {user_message}
+"""
+
     try:
-        messages = [
-            {"role": "system", "content": ROUTER_PROMPT},
-            {"role": "user", "content": user_message}
-        ]
-        payload = {
-            "model": ARCHITECT_MODEL_REGULAR,  # deepseek/deepseek-v3.2 или другая из конфигурации
-            "messages": messages,
-            "temperature": 0.2,
-            "max_tokens": 300
-        }
-        response = await asyncio.wait_for(
-            call_model(payload),
-            timeout=10.0
-        )
-        # Очистка возможных маркеров markdown
-        response = response.strip().strip('```json').strip('```').strip()
-        result = json.loads(response)
-        # Валидация
-        if not isinstance(result.get("agents"), list):
-            raise ValueError("agents not a list")
-        return result
+        from app.settings import API_BASE_URL, API_KEY, ROUTER_MODEL
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{API_BASE_URL}/chat/completions",
+                headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "model": ROUTER_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.1,
+                    "max_tokens": 500
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+            content = data["choices"][0]["message"]["content"]
+            if "```json" in content: 
+                content = content.split("```json")[1].split("```")[0] 
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0]
+            routing = json.loads(content.strip())
+            if not all(k in routing for k in ("task_type", "complexity", "agents", "reason")):
+                raise ValueError("Missing fields")
+            logger.info(f"Router decision: {routing}")
+            return routing
     except Exception as e:
         logger.error(f"Router failed: {e}, using fallback")
-        return {
-            "task_type": "mixed",
-            "complexity": "simple",
-            "agents": ["Architect", "Code"],
-            "reason": "fallback due to error"
-        }
+        return DEFAULT_ROUTING

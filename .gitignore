@@ -1,10 +1,11 @@
 # Secrets
 .env
-.env.example
-# (за исключением .env.example, если мы хотим его оставить для структуры, но .env — точно игнорировать)
+# .env.example (оставляем для структуры, но .env — точно игнорировать)
 
 # Python
+pycache/
 __pycache__/
+*.pyc
 *.py[cod]
 *$py.class
 *.so

@@ -11,15 +11,16 @@ MODEL_NAME = os.getenv("MODEL_NAME", "deepseek/deepseek-chat")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Модели агентов
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "deepseek/deepseek-chat")
 ARCHITECT_MODEL_REGULAR = os.getenv("ARCHITECT_MODEL_REGULAR", "deepseek/deepseek-v3.2")
 ARCHITECT_MODEL_COMPLEX = os.getenv("ARCHITECT_MODEL_COMPLEX", "deepseek/deepseek-r1")
 CODE_MODEL = os.getenv("CODE_MODEL", "qwen/qwen3-coder")
-DEBUG_MODEL = os.getenv("DEBUG_MODEL", "deepseek/deepseek-v3.2")
-REVIEW_MODEL = os.getenv("REVIEW_MODEL", "deepseek/deepseek-v3.2")
+DEBUG_MODEL = os.getenv("DEBUG_MODEL", "qwen/qwen3.5-35b-a3b")
+REVIEW_MODEL = os.getenv("REVIEW_MODEL", "qwen/qwen3.5-35b-a3b")
 
 # Пути к директориям
-MEMORY_BANK_PATH = os.getenv("MEMORY_BANK_PATH", os.path.join(os.environ.get("APPDATA", ""), "AI-Assistant", "memory-bank"))
-LOGS_PATH = os.getenv("LOGS_PATH", os.path.join(os.environ.get("APPDATA", ""), "AI-Assistant", "logs"))
+MEMORY_BANK_PATH = os.path.expandvars(os.getenv("MEMORY_BANK_PATH", os.path.join(os.environ.get("APPDATA", ""), "AI-Assistant", "memory-bank")))
+LOGS_PATH = os.path.expandvars(os.getenv("LOGS_PATH", os.path.join(os.environ.get("APPDATA", ""), "AI-Assistant", "logs")))
 
 # Для совместимости с Windows
 if not os.path.exists(MEMORY_BANK_PATH):
